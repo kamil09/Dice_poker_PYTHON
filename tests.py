@@ -1,4 +1,6 @@
 import unittest
+
+import ai
 import dice
 
 #UNIT TESTS :)
@@ -87,6 +89,19 @@ class TestDicesMethods(unittest.TestCase):
             self.assertEqual(i[2],dice.checkWinner(i[0],i[1]), i)
 
 
+class TestAIMethod(unittest.TestCase):
+    def test_simple_rethrow(self):
+        result, rethrow = ai.simpleRethrow([5,5,5,5,5])
+        self.assertEqual(len(result),5, "Incorrect array len after rethrowing")
+        self.assertEqual(len(rethrow),0, "Shouldn't rethrow good figure")
+
+        result, rethrow = ai.simpleRethrow([2,3,4,5,6])
+        self.assertEqual(len(result),5, "Incorrect array len after rethrowing")
+        self.assertEqual(len(rethrow),0, "Shouldn't rethrow good figure")
+
+        result, rethrow = ai.simpleRethrow([4, 4, 4, 4, 1])
+        self.assertEqual(len(result), 5, "Incorrect array len after rethrowing")
+        self.assertEqual(len(rethrow),1, "Shouldn't rethrow good figure")
 
 if __name__ == '__main__':
     unittest.main()

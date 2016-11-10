@@ -43,7 +43,7 @@ def checkNothing(diceList):
     return True, max(diceList)
 
 def checkWinner(diceList1, diceList2):
-    for fi, func in enumerate(pokerFunctions):
+    for fi, func in enumerate(__pokerFunctions__):
         res1, val1 = func(diceList1)
         res2, val2 = func(diceList2)
         if(res1==False and res2==False): continue
@@ -53,8 +53,8 @@ def checkWinner(diceList1, diceList2):
         if(val1>val2): return 1
         if(val2>val1): return 2
         #The same figures and values
-        diceList1 = deleteFigures[fi](diceList1,val1)
-        diceList2 = deleteFigures[fi](diceList2,val2)
+        diceList1 = __deleteFigures__[fi](diceList1,val1)
+        diceList2 = __deleteFigures__[fi](diceList2,val2)
     return 0 #Remis
 
 def checkCountHelper(diceList, num):
@@ -77,5 +77,5 @@ def simpleFDel(diceList, num):
 def returnEmptyArray(diceList, num):
     return []
 
-pokerFunctions  = [checkPoker, checkKareta, checkFull, checkStrit, checkThree, check2pair, check1pair, checkNothing]
-deleteFigures   = [returnEmptyArray, simpleFDel, returnEmptyArray, returnEmptyArray, simpleFDel, simpleFDel, simpleFDel, simpleFDel ]
+__pokerFunctions__  = [checkPoker, checkKareta, checkFull, checkStrit, checkThree, check2pair, check1pair, checkNothing]
+__deleteFigures__   = [returnEmptyArray, simpleFDel, returnEmptyArray, returnEmptyArray, simpleFDel, simpleFDel, simpleFDel, simpleFDel ]
