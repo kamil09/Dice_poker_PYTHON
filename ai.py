@@ -10,7 +10,7 @@ def simpleRethrow(myDices):
             returnDices = dice.rand(len(toRethrow))
             for x in myDices:
                 if(x not in toRethrow): returnDices.append(x)
-            return myDices, toRethrow
+            return returnDices, toRethrow
     return "NOT POSSIBLE TO RETURN THIS"
 
 

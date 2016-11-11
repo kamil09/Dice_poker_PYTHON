@@ -1,4 +1,5 @@
 import random
+import sys
 
 def rand(number):
     dices = []
@@ -79,3 +80,16 @@ def returnEmptyArray(diceList, num):
 
 __pokerFunctions__  = [checkPoker, checkKareta, checkFull, checkStrit, checkThree, check2pair, check1pair, checkNothing]
 __deleteFigures__   = [returnEmptyArray, simpleFDel, returnEmptyArray, returnEmptyArray, simpleFDel, simpleFDel, simpleFDel, simpleFDel ]
+
+diceShow = [
+    ["|     |","|x    |","|x    |", "|x   x|","|x   x|","|x   x|"],
+    ["|  x  |","|     |","|  x  |", "|     |","|  x  |","|x   x|"],
+    ["|     |","|    x|","|    x|", "|x   x|","|x   x|","|x   x|"]
+]
+
+def printDicesInLine(dicesList):
+    for i in range(3):
+        print("\t\t",end="")
+        for k in dicesList:
+            print(diceShow[i][k-1]+"  ", end="")
+        print("")
