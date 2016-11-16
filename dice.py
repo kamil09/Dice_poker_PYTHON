@@ -1,5 +1,6 @@
 import random
-import sys
+from colors import bcolors
+
 
 def rand(number):
     dices = []
@@ -87,9 +88,9 @@ diceShow = [
     ["|     |","|    x|","|    x|", "|x   x|","|x   x|","|x   x|"]
 ]
 
-def printDicesInLine(dicesList):
+def printDicesInLine(dicesList, colorStr=""):
     for i in range(3):
-        print("\t\t",end="")
+        print(bcolors.BOLD+colorStr+"\t\t",end="")
         for k in dicesList:
             print(diceShow[i][k-1]+"  ", end="")
-        print("")
+        print(""+bcolors.ENDC)
