@@ -17,7 +17,7 @@ def autoCanny(image,sigma=0.33):
 # trackbars
 track = "Image"
 cv2.namedWindow(track)
-cv2.createTrackbar("c1", track, 130, 255, passing)
+cv2.createTrackbar("c1", track, 80, 255, passing)
 # cv2.createTrackbar("c2", track, 10, 500, passing)
 cv2.createTrackbar("c3", track, 10, 500, passing)
 cv2.createTrackbar("c4", track, 10, 500, passing)
@@ -53,8 +53,8 @@ def findSquares(image):
         perimeter = cv2.arcLength(c, True)
         aprox = cv2.getTrackbarPos("c5",track)/100.0
         approximation = cv2.approxPolyDP(c, aprox * perimeter, True)
-        # if len(approximation) == 4:
-        #     diceContours.appenddiceContours.append(approximation)
+        if len(approximation) == 4:
+            diceContours.append(approximation)
     return diceContours
 
 def findDice(image):
@@ -96,6 +96,7 @@ def findDice(image):
 
 
 
+
 def testowanie(image):
     img = image
     # cv2.imshow("test",img)
@@ -103,12 +104,27 @@ def testowanie(image):
     # for i in range(len(img)):
     #     for j in range(len(img[i])):
     #         img[i][j][0] = int((img[i][j][0]/10))*10
-    # img = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+
+    img = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
     # min = cv2.getTrackbarPos("c1",track)
     # max = cv2.getTrackbarPos("c2", track)
     # min = 0
     # max = 30
-    # img = cv2.inRange(img,np.array([min,0,0]),np.array([max,255,255]))
+    # redObjects = 0
+    # np.array(redObjects)
+    test1 = cv2.inRange(img,np.array([0,100,0]),np.array([20,255,255]))
+    test2 = cv2.inRange(img,np.array([160,100,0]),np.array([180,255,255]))
+    test = test1 + test2
+    # print(test)
+    # img[: ,: ,0] = img[:,:,0] * test[:,:]
+    # img[:, :, 1] = img[:, :, 1] * test[:, :]
+    img[:, :, 2] = img[:, :, 2] * test[:, :]
+
+    img = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
+    cv2.imshow("imageTest",img)
+    # cv2.imshow("test",test1)
+    # cv2.imshow("test2",test2)
+    cv2.imshow("test",test)
     # img[:,:,0] =
     kernelSharpen = np.array([[-1, -1, -1, -1, -1],
                                  [-1, 2, 2, 2, -1],
@@ -119,11 +135,8 @@ def testowanie(image):
     # kernelSharpen = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
     # img = cv2.filter2D(img,-1,kernelSharpen)
     # cv2.imshow("sharpen",img)
-
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    linie = cv2.HoughLines(img, 1, np.pi / 180, 200)
-    print(linie)
-
+    # img = test
     # img = cv2.equalizeHist(img)
 
     # c2 = cv2.getTrackbarPos("c2", track)
@@ -134,7 +147,7 @@ def testowanie(image):
 
     c1 = cv2.getTrackbarPos("c1",track)
     # ret, img = cv2.threshold(img, c1, 255, cv2.THRESH_BINARY_INV)
-    ret, img = cv2.threshold(img, c1, 255, cv2.THRESH_BINARY)
+    ret, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)
     # th, img = cv2.threshold(img, c1, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     # ret, img = cv2.threshold(img, c1, 255, cv2.THRESH_TOZERO_INV)
 
@@ -145,7 +158,12 @@ def testowanie(image):
     # img = cv2.equalizeHist(img)
 
     img = autoCanny(img)
+    # img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
 
+    # img = cv2.bilateralFilter(img, 10, c3, c4)  # Blur image, remove noise but keep edges
+
+    # lines = cv2.HoughLinesP(img,1,np.pi/180,100)
+    # img = cv2.medianBlur(img,1)
     # img = cv2.Laplacian(img, cv2.CV_64F)
     # img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
@@ -157,6 +175,8 @@ def testowanie(image):
     # img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
     # cv2.imshow("test",cv2.cvtColor(image,cv2.COLOR_BGR2GRAY))
 
+
+    # ZNAJDYWANIE KOSCI
     dices = findSquares(img)
     # dices = None
     # img = findCircles(img)
@@ -167,6 +187,9 @@ def testowanie(image):
             # cv2.drawContours(circle, [d], -1, (0, 0, 255), 3)
             cv2.drawContours(img, [d], -1, (0, 0, 255), 3)
 
+    # if lines is not None:
+    #     for x1,y1,x2,y2 in lines[0]:
+    #         cv2.line(img,(x1,y1),(x2,y2),(0,255,0),2)
     cv2.imshow(track,img)
 
 
@@ -185,10 +208,16 @@ def playCamera(camera):
     cap.release()
     cv2.destroyAllWindows()
 
-if __name__ == '__main__':
-    # image = cv2.imread("dice.jpg")
+def playImages():
+    image = cv2.imread("./images/20.jpg")
     # cv2.imshow("obraz",image)
     # findDice(image)
-    # testowanie(image)
-    # cv2.waitKey(0)
-    playCamera(0)
+    while True:
+        testowanie(image)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    playImages()
+    # playCamera(0)
