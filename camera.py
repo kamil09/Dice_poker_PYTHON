@@ -86,6 +86,29 @@ def perspectiveView(image,rect):
     warp = cv2.warpPerspective(image,transform,(int(maxWidth),int(maxHeight)))
     return warp
 
+def watershedAlgorythm(image,thresh):
+    img = image.copy()
+    kernel = np.ones((3, 3), np.uint8)
+    opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+
+    sure_bg = cv2.dilate(opening,kernel,iterations=3)
+    dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+    ret, sure_fg = cv2.threshold(dist_transform, 0.7 * dist_transform.max(), 255, 0)
+    # Finding unknown region
+
+    sure_fg = np.uint8(sure_fg)
+    unknown = cv2.subtract(sure_bg, sure_fg)
+    ret, markers = cv2.connectedComponents(sure_fg)
+    markers = markers + 1
+    markers[unknown == 255] = 0
+    markers = cv2.watershed(img, markers)
+    # print(markers)
+    print(markers.shape())
+    # img[markers == -1] = [255, 0, 0]
+    # img[markers == 1] = [0,0,0]
+
+    return img
+
 
 def findAndDraw(image):
     if image is None: return
@@ -107,8 +130,8 @@ def findAndDraw(image):
     # per = cv2.getTrackbarPos("c1",track)
     # per= np.percentile(img,v)    #RESCALE CONTRAST
 
-    per = 80
-    img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per, 150), out_range=(0, 255))
+    per = 90
+    img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per, 180), out_range=(0, 255))
 
     # per = cv2.getTrackbarPos("c2",track)
     per = 10
@@ -133,7 +156,12 @@ def findAndDraw(image):
     imgR = cv2.bilateralFilter(imgR, 10, 150, 150)  # Blur image, remove noise but keep edges
     ret, imgR = cv2.threshold(imgR, 120, 255, cv2.THRESH_BINARY)
 
+    imgR = cv2.morphologyEx(imgR, cv2.MORPH_CLOSE, kernel, iterations=4)
+    imgR = cv2.morphologyEx(imgR, cv2.MORPH_OPEN, kernel, iterations=4)
+
     cv2.imshow("AFTER", imgR)
+    test = watershedAlgorythm(image,imgR)
+    cv2.imshow("TEST",test)
     dices = findSquares(imgR)
 
     if (dices is not None):
