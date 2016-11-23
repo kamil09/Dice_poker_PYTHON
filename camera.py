@@ -105,7 +105,10 @@ def watershedAlgorythm(image,thresh):
     markers = markers * -1
     markers = (markers +1)/2
     markers = markers * 255
-    markers = cv2.GaussianBlur(markers,(5,5),0.2)
+    markers = np.uint8(markers)
+    markers = cv2.bilateralFilter(markers, 10, 150, 150)  # Blur image, remove noise but keep edges
+
+    # markers = cv2.GaussianBlur(markers,(5,5),0.2)
     # print(markers)
     img[markers != 0] = [255, 255, 255]
     img[markers == 0] = [0,0,0]
@@ -118,7 +121,8 @@ def findBlobs(image):
     return keypoints
 
 def findAndDraw(image):
-    if image is None: return
+    if image is None:
+        return
     img = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2HSV)
 
     img = cv2.medianBlur(img, 5)
@@ -131,11 +135,6 @@ def findAndDraw(image):
     wholeRange = cv2.morphologyEx(wholeRange, cv2.MORPH_CLOSE, kernel, iterations=2)
 
     img = cv2.bitwise_and(img, img, mask=wholeRange)
-    test = img.copy()
-    test = cv2.cvtColor(test, cv2.COLOR_HSV2BGR);
-
-    # per = cv2.getTrackbarPos("c1",track)
-    # per= np.percentile(img,v)    #RESCALE CONTRAST
 
     per = 90
     img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per, 180), out_range=(0, 255))
@@ -143,12 +142,15 @@ def findAndDraw(image):
     # per = cv2.getTrackbarPos("c2",track)
     per = 10
     # per= np.percentile(img,s)    #RESCALE CONTRAST
-    img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(0, per), out_range=(0, 255))
+    test = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
+    # img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(0, per), out_range=(0, 255))
 
     img[:, :, 2] = img[:, :, 2] * (((np.float32(img[:, :, 1]) / 255) + 1) / 2)
     # img[:,:,1] = np.where(img[:,:,1] < 80, 0, 255)  # Expected results
 
 
+    test2 = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
+    cv2.imshow("AFTER", np.hstack([test,test2]))
     img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR);
     imgR = img.copy()
     imgR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
@@ -167,9 +169,7 @@ def findAndDraw(image):
 
     checkContour = watershedAlgorythm(image,imgR)
     checkContour = cv2.cvtColor(checkContour,cv2.COLOR_BGR2GRAY)
-    cv2.imshow("BEFORE", imgR)
     imgR = cv2.bitwise_and(imgR, imgR, mask=checkContour)
-    cv2.imshow("AFTER", imgR)
     dices = findSquares(imgR)
 
     kostki = []
@@ -182,31 +182,33 @@ def findAndDraw(image):
             minY = min(Y)
             maxY = max(Y)
             if not (maxX - minX < minSquare or maxY - minY < minSquare):
-                # cv2.imshow("KOSTKA",image[minY:maxY,minX:maxX])
 
-                dice = perspectiveView(image,getRect(d))
+                dice = perspectiveView(image.copy(),getRect(d))
                 dice = cv2.resize(dice, None, fx=6, fy=6, interpolation=cv2.INTER_CUBIC)
-                # dice = cv2.GaussianBlur(dice,(5,5),0.2)
                 dice = cv2.cvtColor(dice,cv2.COLOR_BGR2GRAY)
                 dice = 255 - dice
-                # dice = cv2.threshold(dice,255,0,cv2.THRESH_TOZERO_INV)
                 dice = exposure.rescale_intensity(dice, in_range=(80, 140), out_range=(0, 255))
                 keyPoints = findBlobs(dice)
                 dice = cv2.cvtColor(dice,cv2.COLOR_GRAY2BGR)
                 dice = cv2.drawKeypoints(dice,keyPoints,np.array([]),(0,255,0))
-                kostki.append(len(keyPoints))
+                if ( 0 < len(keyPoints) < 7):
+                    kostki.append(len(keyPoints))
                 cv2.imshow("Dice",dice)
 
-                # circles = findCircles(img, d)
-                #for c in circles:
-                #TODO DRAW CIRCLES
                 cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
     cv2.imshow("Kostki", image)
     return kostki
 
 
+def probkowanie(tablicaKostek,kostki):
+    kostki = sorted(kostki)
+    
+    tablicaKostek.append(kostki)
+    return tablicaKostek
+
 def playCamera(camera):
     cap, check = cv2.VideoCapture(camera), True
+    tablicaKostek = []
     while (check):
         check, klatka = cap.read()
         kostki = findAndDraw(klatka)
@@ -216,4 +218,4 @@ def playCamera(camera):
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    playCamera(0)
+    playCamera(1)
