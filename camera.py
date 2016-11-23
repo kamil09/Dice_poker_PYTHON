@@ -172,19 +172,28 @@ def findAndDraw(image):
             maxX = max(X)
             minY = min(Y)
             maxY = max(Y)
+            size = max(maxY-minY, maxX-minX)
             if not (maxX - minX < minSquare or maxY - minY < minSquare):
 
                 dice = perspectiveView(image.copy(),getRect(d))
-                dice = cv2.resize(dice, None, fx=6, fy=6, interpolation=cv2.INTER_CUBIC)
-                dice = cv2.cvtColor(dice,cv2.COLOR_BGR2GRAY)
+
+
+                dice = cv2.resize(dice, None, fx=400/size, fy=400/size, interpolation=cv2.INTER_CUBIC)
+
+                dice = dice[:,:,1]
+                #dice = cv2.cvtColor(dice,cv2.COLOR_BGR2GRAY)
                 dice = 255 - dice
-                dice = exposure.rescale_intensity(dice, in_range=(80, 140), out_range=(0, 255))
+                p = np.percentile(dice, 4)
+
+                dice = exposure.rescale_intensity(dice, in_range=(p, 255), out_range=(0, 255))
+
+
                 keyPoints = findBlobs(dice)
                 dice = cv2.cvtColor(dice,cv2.COLOR_GRAY2BGR)
                 dice = cv2.drawKeypoints(dice,keyPoints,np.array([]),(0,255,0))
                 if ( 0 < len(keyPoints) < 7):
                     kostki.append(len(keyPoints))
-                #cv2.imshow("Dice",dice)
+                cv2.imshow("Dice",dice)
 
                 cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
     cv2.imshow("Kostki", image)
@@ -212,7 +221,9 @@ def playCamera(camera):
 def checkImages():
     for i in range(35):
         image = cv2.imread("images/"+str(i+1)+".jpg")
-        _ = findAndDraw(image)
+        kostki = findAndDraw(image)
+        print(kostki)
+
         while(True):
             if cv2.waitKey(1) & 0xFF == ord('q'): break
 
