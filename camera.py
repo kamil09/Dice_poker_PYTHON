@@ -169,7 +169,7 @@ def findAndDraw(image):
 
     checkContour = watershedAlgorythm(image,imgR)
     checkContour = cv2.cvtColor(checkContour,cv2.COLOR_BGR2GRAY)
-    imgR = cv2.bitwise_and(imgR, imgR, mask=checkContour)
+    #imgR = cv2.bitwise_and(imgR, imgR, mask=checkContour)
     dices = findSquares(imgR)
 
     kostki = []
@@ -208,7 +208,8 @@ def probkowanie(tablicaKostek,kostki):
 
 def playCamera(camera):
     cap, check = cv2.VideoCapture(camera), True
-    tablicaKostek = []
+    cap.set(3,640)
+    cap.set(4,480)
     while (check):
         check, klatka = cap.read()
         kostki = findAndDraw(klatka)
@@ -217,5 +218,15 @@ def playCamera(camera):
     cap.release()
     cv2.destroyAllWindows()
 
+def checkImages():
+    for i in range(23):
+        image = cv2.imread("images/"+str(i)+".jpg")
+        _ = findAndDraw(image)
+        while(True):
+            if cv2.waitKey(1) & 0xFF == ord('q'): break
+
+    cv2.destroyAllWindows()
+
 if __name__ == '__main__':
-    playCamera(1)
+    # playCamera(0)
+    checkImages()
