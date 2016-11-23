@@ -12,33 +12,6 @@ def autoCanny(image,sigma=0.33):
 
 minSquare = 40
 
-def findCircles2(image):
-    circles = cv2.HoughCircles(image,cv2.HOUGH_GRADIENT,1,40,param1=50,param2=30,minRadius=0,maxRadius=0)
-    image = cv2.cvtColor(image,cv2.COLOR_GRAY2BGR)
-    if circles is None:
-        return []
-    circles = np.uint16(np.around(circles))
-    for i in circles[0,:]:
-        cv2.circle(image,(i[0],i[1]),i[2],(0,255,0),2) #Outter circle
-        cv2.circle(image,(i[0],i[1]),2,(255,0,0),3) #Center of a circle
-    return image
-
-
-def findCircles(image, contours):   #RETURN LIST OF CIRCLES
-    X = contours[:,0][:,0]
-    Y = contours[:,0][:,1]
-    if( max(X)-min(X)<minSquare or max(Y)-min(Y)<minSquare ): return []
-    img = image[min(Y):max(Y),min(X):max(X)]
-    img = exposure.rescale_intensity(img, in_range=(np.percentile(img, (50)), 255), out_range=(0, 255))
-    size = max(max(X)-min(X) , max(Y)-min(Y))
-    cv2.imshow("MAła kostka", img)
-
-    circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1000,1000)
-    print(circles) #SHOULD PRINT CIRCLES :/
-    if circles is None: return []
-    circles = np.uint16(np.around(circles))
-    return circles[0,:]
-
 def findSquares(image):
     image2, conturs, hierarchy = cv2.findContours(image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     diceContours = []
@@ -121,55 +94,73 @@ def findBlobs(image):
     return keypoints
 
 def findAndDraw(image):
-    if image is None:
-        return
-    img = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2HSV)
+    if image is None: return
+
+    img = image.copy()
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+
+    per1, per2 = np.percentile(img[:,:,0], (5, 80))
+    img[:,:,0] = exposure.rescale_intensity(img[:, :, 0], in_range=(per1, per2), out_range=(0, 180))
+
+    per1, per2 = np.percentile(img[:, :, 1], (5, 99))
+    img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(per1, per2), out_range=(0, 255))
+
+    per1, per2 = np.percentile(img[:, :, 2], (5, 99))
+    img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per1, per2), out_range=(0, 255))
+
+
+
+
 
     img = cv2.medianBlur(img, 5)
-    innerRange = cv2.inRange(img, np.array([0, 0, 0], dtype="uint8"), np.array([10, 255, 255], dtype="uint8"))
-    outerRange = cv2.inRange(img, np.array([160, 0, 0], dtype="uint8"), np.array([180, 255, 255], dtype="uint8"))
-    wholeRange = innerRange + outerRange
 
-    kernel = np.ones((3, 3), np.uint8)
-    wholeRange = cv2.morphologyEx(wholeRange, cv2.MORPH_OPEN, kernel, iterations=2)
-    wholeRange = cv2.morphologyEx(wholeRange, cv2.MORPH_CLOSE, kernel, iterations=2)
+    innerRange = cv2.inRange(img, np.array([0, 80, 0], dtype="uint8"), np.array([25, 255, 255], dtype="uint8"))
+    #
+    kernel = np.ones((6, 6), np.uint8)
+    innerRange = cv2.morphologyEx(innerRange, cv2.MORPH_CLOSE, kernel, iterations=2)
 
-    img = cv2.bitwise_and(img, img, mask=wholeRange)
 
-    per = 90
-    img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per, 180), out_range=(0, 255))
+    #kernel = np.ones((2, 2), np.uint8)
+    #wholeRange = cv2.morphologyEx(wholeRange, cv2.MORPH_OPEN, kernel, iterations=3)
+    #wholeRange = cv2.morphologyEx(wholeRange, cv2.MORPH_CLOSE, kernel, iterations=3)
 
-    # per = cv2.getTrackbarPos("c2",track)
-    per = 10
-    # per= np.percentile(img,s)    #RESCALE CONTRAST
-    test = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
+    img[:,:,2] = cv2.bitwise_and(img[:,:,2], img[:,:,2], mask=innerRange)
+
+
+
+    #per = 80
+    #img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per, 180), out_range=(0, 255))
+
+
+    #test = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
     # img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(0, per), out_range=(0, 255))
 
-    img[:, :, 2] = img[:, :, 2] * (((np.float32(img[:, :, 1]) / 255) + 1) / 2)
+    #img[:, :, 2] = img[:, :, 2]*(((np.float32(img[:, :, 1]) / 255) + 1) / 2)
     # img[:,:,1] = np.where(img[:,:,1] < 80, 0, 255)  # Expected results
 
 
-    test2 = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
-    cv2.imshow("AFTER", np.hstack([test,test2]))
     img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR);
     imgR = img.copy()
     imgR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
 
-    imgR = exposure.rescale_intensity(imgR, in_range=(0, 80), out_range=(0, 255))
-
-
-    per, per2 = np.percentile(imgR, (80, 100))  # RESCALE CONTRAST
-    if per2 > per:
-        imgR = exposure.rescale_intensity(imgR, in_range=(per, per2), out_range=(0, 255))
     imgR = cv2.bilateralFilter(imgR, 10, 150, 150)  # Blur image, remove noise but keep edges
-    ret, imgR = cv2.threshold(imgR, 120, 255, cv2.THRESH_BINARY)
 
-    imgR = cv2.morphologyEx(imgR, cv2.MORPH_CLOSE, kernel, iterations=4)
-    imgR = cv2.morphologyEx(imgR, cv2.MORPH_OPEN, kernel, iterations=4)
+    p50 = np.percentile(imgR, 60)
+    ret, imgR = cv2.threshold(imgR, p50, 255, cv2.THRESH_BINARY)
 
-    checkContour = watershedAlgorythm(image,imgR)
-    checkContour = cv2.cvtColor(checkContour,cv2.COLOR_BGR2GRAY)
+
+    kernel = np.ones((3, 3), np.uint8)
+    imgR = cv2.morphologyEx(imgR, cv2.MORPH_OPEN, kernel, iterations=6)
+
+    #checkContour = watershedAlgorythm(image,imgR)
+    #checkContour = cv2.cvtColor(checkContour,cv2.COLOR_BGR2GRAY)
+
+
     #imgR = cv2.bitwise_and(imgR, imgR, mask=checkContour)
+    cv2.imshow("AAA", cv2.cvtColor(imgR, cv2.COLOR_GRAY2BGR))
+
+
     dices = findSquares(imgR)
 
     kostki = []
@@ -193,7 +184,7 @@ def findAndDraw(image):
                 dice = cv2.drawKeypoints(dice,keyPoints,np.array([]),(0,255,0))
                 if ( 0 < len(keyPoints) < 7):
                     kostki.append(len(keyPoints))
-                cv2.imshow("Dice",dice)
+                #cv2.imshow("Dice",dice)
 
                 cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
     cv2.imshow("Kostki", image)
@@ -219,8 +210,8 @@ def playCamera(camera):
     cv2.destroyAllWindows()
 
 def checkImages():
-    for i in range(23):
-        image = cv2.imread("images/"+str(i)+".jpg")
+    for i in range(35):
+        image = cv2.imread("images/"+str(i+1)+".jpg")
         _ = findAndDraw(image)
         while(True):
             if cv2.waitKey(1) & 0xFF == ord('q'): break
