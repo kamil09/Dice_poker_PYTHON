@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
 from skimage.exposure import exposure
-import camera2
-
+import blob
 
 def autoCanny(image,sigma=0.33):
     med = np.median(image)
@@ -103,12 +102,20 @@ def watershedAlgorythm(image,thresh):
     markers[unknown == 255] = 0
     markers = cv2.watershed(img, markers)
     # print(markers)
-    print(markers.shape())
-    # img[markers == -1] = [255, 0, 0]
-    # img[markers == 1] = [0,0,0]
+    markers = markers * -1
+    markers = (markers +1)/2
+    markers = markers * 255
+    markers = cv2.GaussianBlur(markers,(5,5),0.2)
+    # print(markers)
+    img[markers != 0] = [255, 255, 255]
+    img[markers == 0] = [0,0,0]
 
     return img
 
+def findBlobs(image):
+    detector = cv2.SimpleBlobDetector_create(blob.__blobSettings__)
+    keypoints = detector.detect(image)
+    return keypoints
 
 def findAndDraw(image):
     if image is None: return
@@ -148,7 +155,6 @@ def findAndDraw(image):
 
     imgR = exposure.rescale_intensity(imgR, in_range=(0, 80), out_range=(0, 255))
 
-    cv2.imshow("BEFORE", imgR)
 
     per, per2 = np.percentile(imgR, (80, 100))  # RESCALE CONTRAST
     if per2 > per:
@@ -159,11 +165,14 @@ def findAndDraw(image):
     imgR = cv2.morphologyEx(imgR, cv2.MORPH_CLOSE, kernel, iterations=4)
     imgR = cv2.morphologyEx(imgR, cv2.MORPH_OPEN, kernel, iterations=4)
 
+    checkContour = watershedAlgorythm(image,imgR)
+    checkContour = cv2.cvtColor(checkContour,cv2.COLOR_BGR2GRAY)
+    cv2.imshow("BEFORE", imgR)
+    imgR = cv2.bitwise_and(imgR, imgR, mask=checkContour)
     cv2.imshow("AFTER", imgR)
-    test = watershedAlgorythm(image,imgR)
-    cv2.imshow("TEST",test)
     dices = findSquares(imgR)
 
+    kostki = []
     if (dices is not None):
         for d in dices:
             X = d[:, 0][:, 0]
@@ -179,14 +188,13 @@ def findAndDraw(image):
                 dice = cv2.resize(dice, None, fx=6, fy=6, interpolation=cv2.INTER_CUBIC)
                 # dice = cv2.GaussianBlur(dice,(5,5),0.2)
                 dice = cv2.cvtColor(dice,cv2.COLOR_BGR2GRAY)
-                _, pipes, hierarchy = cv2.findContours(dice.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                dice = 255 - dice
+                # dice = cv2.threshold(dice,255,0,cv2.THRESH_TOZERO_INV)
+                dice = exposure.rescale_intensity(dice, in_range=(80, 140), out_range=(0, 255))
+                keyPoints = findBlobs(dice)
                 dice = cv2.cvtColor(dice,cv2.COLOR_GRAY2BGR)
-                if pipes is not None:
-                    for p in pipes:
-                        cv2.drawContours(dice, [p], -1, (0, 255, 0), 3)
-
-                # dice = exposure.rescale_intensity(dice, in_range=(80, 140), out_range=(0, 255))
-
+                dice = cv2.drawKeypoints(dice,keyPoints,np.array([]),(0,255,0))
+                kostki.append(len(keyPoints))
                 cv2.imshow("Dice",dice)
 
                 # circles = findCircles(img, d)
@@ -194,13 +202,15 @@ def findAndDraw(image):
                 #TODO DRAW CIRCLES
                 cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
     cv2.imshow("Kostki", image)
+    return kostki
 
 
 def playCamera(camera):
     cap, check = cv2.VideoCapture(camera), True
     while (check):
         check, klatka = cap.read()
-        findAndDraw(klatka)
+        kostki = findAndDraw(klatka)
+        print(kostki)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
     cap.release()
     cv2.destroyAllWindows()
