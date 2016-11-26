@@ -202,7 +202,7 @@ def findAndDraw(image):
 
 def probkowanie(tablicaKostek,kostki):
     kostki = sorted(kostki)
-    
+
     tablicaKostek.append(kostki)
     return tablicaKostek
 
@@ -219,7 +219,7 @@ def playCamera(camera):
     cv2.destroyAllWindows()
 
 def checkImages():
-    for i in range(35):
+    for i in range(65):
         image = cv2.imread("images/"+str(i+1)+".jpg")
         kostki = findAndDraw(image)
         print(kostki)
