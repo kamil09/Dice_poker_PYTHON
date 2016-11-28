@@ -18,13 +18,13 @@ def findSquares(image):
     for c in conturs:
         perimeter = cv2.arcLength(c, True)
         approximation = cv2.approxPolyDP(c, 0.1 * perimeter, True)
-        if len(approximation) == 4:
+        if len(approximation) >= 4:
             diceContours.append(approximation)
     return diceContours
 
 
 def getRect(contour):
-    pts = contour.reshape(4, 2)
+    pts = contour.reshape(len(contour), 2)
     rect = np.zeros((4, 2), dtype="float32")
 
     suma = pts.sum(axis=1)
