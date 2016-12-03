@@ -1,19 +1,14 @@
 import cv2
 import numpy as np
 from skimage.exposure import exposure
-import blob
 
-def autoCanny(image,sigma=0.33):
-    med = np.median(image)
-    dolny = int(max(0,(1.0 - sigma)*med))
-    gorny = int(min(255, (1.0 + sigma) * med))
-    edges = cv2.Canny(image,dolny,gorny)
-    return edges
+from dice_img_lib import blob
 
 minSquare = 40
 
 def findSquares(image):
-    image2, conturs, hierarchy = cv2.findContours(image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    image2, conturs, hierarchy = cv2.findContours(image.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+
     diceContours = []
     for c in conturs:
         perimeter = cv2.arcLength(c, True)
@@ -58,36 +53,6 @@ def perspectiveView(image,rect):
     warp = cv2.warpPerspective(image,transform,(int(maxWidth),int(maxHeight)))
     return warp
 
-def watershedAlgorythm(image,thresh):
-    img = image.copy()
-    kernel = np.ones((3, 3), np.uint8)
-    opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
-
-    sure_bg = cv2.dilate(opening,kernel,iterations=3)
-    dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
-    ret, sure_fg = cv2.threshold(dist_transform, 0.7 * dist_transform.max(), 255, 0)
-    # Finding unknown region
-
-    sure_fg = np.uint8(sure_fg)
-    unknown = cv2.subtract(sure_bg, sure_fg)
-    ret, markers = cv2.connectedComponents(sure_fg)
-    markers = markers + 1
-    markers[unknown == 255] = 0
-    markers = cv2.watershed(img, markers)
-    # print(markers)
-    markers = markers * -1
-    markers = (markers +1)/2
-    markers = markers * 255
-    markers = np.uint8(markers)
-    markers = cv2.bilateralFilter(markers, 10, 150, 150)  # Blur image, remove noise but keep edges
-
-    # markers = cv2.GaussianBlur(markers,(5,5),0.2)
-    # print(markers)
-    img[markers != 0] = [255, 255, 255]
-    img[markers == 0] = [0,0,0]
-
-    return img
-
 def findBlobs(image):
     detector = cv2.SimpleBlobDetector_create(blob.__blobSettings__)
     keypoints = detector.detect(image)
@@ -99,67 +64,32 @@ def findAndDraw(image):
     img = image.copy()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-
-    per1, per2 = np.percentile(img[:,:,0], (5, 80))
+    per1, per2 = np.percentile(img[:,:,0], (5, 50))
     img[:,:,0] = exposure.rescale_intensity(img[:, :, 0], in_range=(per1, per2), out_range=(0, 180))
 
-    per1, per2 = np.percentile(img[:, :, 1], (5, 99))
+    per1, per2 = np.percentile(img[:, :, 1], (5, 100))
     img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(per1, per2), out_range=(0, 255))
 
-    per1, per2 = np.percentile(img[:, :, 2], (5, 99))
+    per1, per2 = np.percentile(img[:, :, 2], (6, 100))
     img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per1, per2), out_range=(0, 255))
-
-
-
-
 
     img = cv2.medianBlur(img, 5)
 
-    innerRange = cv2.inRange(img, np.array([0, 80, 0], dtype="uint8"), np.array([25, 255, 255], dtype="uint8"))
-    #
+    innerRange = cv2.inRange(img, np.array([0, 50, 0], dtype="uint8"), np.array([25, 255, 255], dtype="uint8"))
+
     kernel = np.ones((6, 6), np.uint8)
     innerRange = cv2.morphologyEx(innerRange, cv2.MORPH_CLOSE, kernel, iterations=2)
-
-
-    #kernel = np.ones((2, 2), np.uint8)
-    #wholeRange = cv2.morphologyEx(wholeRange, cv2.MORPH_OPEN, kernel, iterations=3)
-    #wholeRange = cv2.morphologyEx(wholeRange, cv2.MORPH_CLOSE, kernel, iterations=3)
-
     img[:,:,2] = cv2.bitwise_and(img[:,:,2], img[:,:,2], mask=innerRange)
 
-
-
-    #per = 80
-    #img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per, 180), out_range=(0, 255))
-
-
-    #test = cv2.cvtColor(img,cv2.COLOR_HSV2BGR)
-    # img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(0, per), out_range=(0, 255))
-
-    #img[:, :, 2] = img[:, :, 2]*(((np.float32(img[:, :, 1]) / 255) + 1) / 2)
-    # img[:,:,1] = np.where(img[:,:,1] < 80, 0, 255)  # Expected results
-
-
-    img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR);
+    img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
     imgR = img.copy()
     imgR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
 
     imgR = cv2.bilateralFilter(imgR, 10, 150, 150)  # Blur image, remove noise but keep edges
-
-    p50 = np.percentile(imgR, 60)
-    ret, imgR = cv2.threshold(imgR, p50, 255, cv2.THRESH_BINARY)
-
+    imgR = exposure.rescale_intensity(imgR, in_range=(0, 100), out_range=(0, 255))
 
     kernel = np.ones((3, 3), np.uint8)
     imgR = cv2.morphologyEx(imgR, cv2.MORPH_OPEN, kernel, iterations=6)
-
-    #checkContour = watershedAlgorythm(image,imgR)
-    #checkContour = cv2.cvtColor(checkContour,cv2.COLOR_BGR2GRAY)
-
-
-    #imgR = cv2.bitwise_and(imgR, imgR, mask=checkContour)
-    cv2.imshow("AAA", cv2.cvtColor(imgR, cv2.COLOR_GRAY2BGR))
-
 
     dices = findSquares(imgR)
 
@@ -196,6 +126,8 @@ def findAndDraw(image):
                 cv2.imshow("Dice",dice)
 
                 cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
+
+    image = cv2.resize(image, None, fx=800/image.shape[1], fy=600/image.shape[0], interpolation=cv2.INTER_CUBIC)
     cv2.imshow("Kostki", image)
     return kostki
 

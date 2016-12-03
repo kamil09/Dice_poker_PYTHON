@@ -1,7 +1,7 @@
 import unittest
 
-import ai
-import dice
+from dice_lib import dice, ai
+
 
 #UNIT TESTS :)
 class TestDicesMethods(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestDicesMethods(unittest.TestCase):
             self.assertTrue(1<=i<=6,"Incorrect dice value")
 
     def test_poker(self):
-        result, val = dice.checkPoker([3,3,3,3,3])
+        result, val = dice.checkPoker([3, 3, 3, 3, 3])
         self.assertTrue(result,"Should be Poker")
         self.assertEqual(val, 3, "Poker should return different value")
 
@@ -23,12 +23,12 @@ class TestDicesMethods(unittest.TestCase):
         self.assertEqual(val, 0, "Poker should return 0 value")
 
     def test_kareta_true(self):
-        result, val = dice.checkKareta([1,2,2,2,2])
+        result, val = dice.checkKareta([1, 2, 2, 2, 2])
         self.assertTrue(result, "Should be Kareta")
         self.assertEqual(val, 2, "Kareta should return different value")
 
     def test_kareta_false(self):
-        result, val = dice.checkKareta([1,2,4,4,4])
+        result, val = dice.checkKareta([1, 2, 4, 4, 4])
         self.assertFalse(result, "Should not be Kareta")
         self.assertEqual(val, 0, "Kareta should return different value")
 
@@ -86,16 +86,16 @@ class TestDicesMethods(unittest.TestCase):
             ([3, 3, 3, 2, 2], [2, 2, 2, 6, 6], 1)
         ]
         for i in testData:
-            self.assertEqual(i[2],dice.checkWinner(i[0],i[1]), i)
+            self.assertEqual(i[2], dice.checkWinner(i[0], i[1]), i)
 
 
 class TestAIMethod(unittest.TestCase):
     def test_simple_rethrow(self):
-        result, rethrow = ai.simpleRethrow([5,5,5,5,5])
+        result, rethrow = ai.simpleRethrow([5, 5, 5, 5, 5])
         self.assertEqual(len(result),5, "Incorrect array len after rethrowing")
         self.assertEqual(len(rethrow),0, "Shouldn't rethrow good figure")
 
-        result, rethrow = ai.simpleRethrow([2,3,4,5,6])
+        result, rethrow = ai.simpleRethrow([2, 3, 4, 5, 6])
         self.assertEqual(len(result),5, "Incorrect array len after rethrowing")
         self.assertEqual(len(rethrow),0, "Shouldn't rethrow good figure")
 

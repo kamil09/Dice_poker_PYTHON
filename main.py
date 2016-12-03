@@ -1,7 +1,8 @@
 from pip._vendor.distlib.compat import raw_input
-import dice
+
 from colors import bcolors
-import ai
+from dice_img_lib.dice_find import find_dices
+from dice_lib import dice, ai
 
 def run():
     print(bcolors.BOLD+"Let's play a game :)"+bcolors.ENDC)
@@ -46,19 +47,47 @@ def playSimpleGame(c_points, p_points):
 def playOneRound(pl1, pl2):
     raw_input()
     computerDices = dice.rand(5)
-    yourDices = dice.rand(5)
+    #yourDices = dice.rand(5)
     print("COMPUTER DICES:")
     dice.printDicesInLine(computerDices, bcolors.YELL_BAC)
+
+    while 1==1:
+        raw_input(bcolors.OKBLUE+"Throw dices and press enter"+bcolors.ENDC)
+        num, yourDices = find_dices()
+        if(num == 5): break
+        print("found "+str(num)+" dices instead of 5, try again")
+
     print("YOUR DICES:")
     dice.printDicesInLine(yourDices, bcolors.BLUE_BAC)
-    print("RETHROW YOUR DICES")
-    raw_input()
+
     computerDices, retC = ai.simpleRethrow(computerDices)
-    yourDices, retY = ai.simpleRethrow(yourDices)
-    print("Computer Rethrow values: ",end="")
+    print("Computer Rethrow values: ", end="")
     print(retC)
-    print("You rethrow values: ",end="")
-    print(retY)
+    print("RETHROW YOUR DICES")
+    while 1==1:
+        raw_input(bcolors.OKBLUE+"Take from table dices you do not want to rethrow"+bcolors.ENDC)
+        num, yourDicesToRethrow = find_dices()
+        if (num <= 5): break
+        print("dices not found")
+    print("You rethrow values: ", end="")
+    print(yourDicesToRethrow)
+
+    yourDices2 = []
+    for x in yourDices:
+        if (x not in yourDicesToRethrow): yourDices2.append(x)
+        for i, y in enumerate(yourDicesToRethrow):
+            if(y==x):
+                yourDicesToRethrow[i]=0
+                break
+    yourDices=yourDices2
+
+    while 1==1:
+        raw_input(bcolors.OKBLUE+"Rethrow dices"+bcolors.ENDC)
+        num2, newDices = find_dices()
+        if (num == num2): break
+        print("found "+str(num2)+" dices instead of "+ str(num)+" , try again")
+    for x in newDices: yourDices.append(x)
+
     print("COMPUTER DICES:")
     dice.printDicesInLine(computerDices, bcolors.YELL_BAC)
     print("YOUR DICES:")

@@ -1,4 +1,5 @@
-import dice
+from dice_lib import dice
+
 
 #Return newList, listOfRethrowDices
 def simpleRethrow(myDices):
