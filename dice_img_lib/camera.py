@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from skimage.exposure import exposure
+from dice_img_lib import const as cst
 
 from dice_img_lib import blob
 
@@ -64,18 +65,19 @@ def findAndDraw(image):
     img = image.copy()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    per1, per2 = np.percentile(img[:,:,0], (5, 50))
+    per1, per2 = np.percentile(img[:,:,0], (cst.rescaleH_per_min, cst.rescaleH_per_max))
     img[:,:,0] = exposure.rescale_intensity(img[:, :, 0], in_range=(per1, per2), out_range=(0, 180))
-
-    per1, per2 = np.percentile(img[:, :, 1], (5, 100))
+    per1, per2 = np.percentile(img[:, :, 1], (cst.rescaleS_per_min, cst.rescaleS_per_max))
     img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(per1, per2), out_range=(0, 255))
-
-    per1, per2 = np.percentile(img[:, :, 2], (6, 100))
+    per1, per2 = np.percentile(img[:, :, 2], (cst.rescaleV_per_min, cst.rescaleV_per_max))
     img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per1, per2), out_range=(0, 255))
 
-    img = cv2.medianBlur(img, 5)
-
-    innerRange = cv2.inRange(img, np.array([0, 50, 0], dtype="uint8"), np.array([25, 255, 255], dtype="uint8"))
+    img = cv2.medianBlur(img, cst.median_blur)
+    perS = np.percentile(img[:,:,1], cst.progS_min)
+    perV = np.percentile(img[:,:,2], cst.progV_min)
+    innerRange = cv2.inRange(img,
+                             np.array([cst.progH_min, perS, perV], dtype="uint8"),
+                             np.array([cst.progH_max, cst.progS_max, cst.progV_max], dtype="uint8"))
 
     kernel = np.ones((6, 6), np.uint8)
     innerRange = cv2.morphologyEx(innerRange, cv2.MORPH_CLOSE, kernel, iterations=2)
@@ -111,19 +113,17 @@ def findAndDraw(image):
                 dice = cv2.resize(dice, None, fx=400/size, fy=400/size, interpolation=cv2.INTER_CUBIC)
 
                 dice = dice[:,:,1]
-                #dice = cv2.cvtColor(dice,cv2.COLOR_BGR2GRAY)
                 dice = 255 - dice
                 p = np.percentile(dice, 4)
 
                 dice = exposure.rescale_intensity(dice, in_range=(p, 255), out_range=(0, 255))
-
 
                 keyPoints = findBlobs(dice)
                 dice = cv2.cvtColor(dice,cv2.COLOR_GRAY2BGR)
                 dice = cv2.drawKeypoints(dice,keyPoints,np.array([]),(0,255,0))
                 if ( 0 < len(keyPoints) < 7):
                     kostki.append(len(keyPoints))
-                cv2.imshow("Dice",dice)
+                #cv2.imshow("Dice",dice)
 
                 cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
 
