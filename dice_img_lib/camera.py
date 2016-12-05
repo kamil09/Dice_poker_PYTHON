@@ -24,7 +24,7 @@ def getRect(contour):
     rect = np.zeros((4, 2), dtype="float32")
 
     pts = sorted(pts,key=lambda x: x[0])
-    print(pts)
+    # print(pts)
     if pts[-1][1] > pts[-2][1]:
         rect[1] = pts[-1]
         rect[2] = pts[-2]
@@ -141,7 +141,7 @@ def findAndDraw(image):
             size = max(maxY-minY, maxX-minX)
             if not (maxX - minX < minSquare or maxY - minY < minSquare):
                 rect = getRect(d)
-                print(rect)
+                # print(rect)
                 dice = perspectiveView(image.copy(),rect)
                 middle = getMiddlePoint(rect)
                 cv2.circle(image, (middle[0], middle[1]), 2, (255, 0, 0), 3)  # Center of a circle
@@ -188,6 +188,10 @@ def playCamera(camera):
     cv2.destroyAllWindows()
 
 def checkImages():
+    coverageMatrix = []
+    allCorrect = 0
+    allWrong = 0
+    allMissed = 0
     for i in range(65):
         fileName = "../images/"+str(i+1)
         image = cv2.imread(fileName+".jpg")
@@ -195,13 +199,22 @@ def checkImages():
         print(kostki)
         test = cv2.imread(fileName+"test.png")
         correct,wrong,missed = checkRectangle(test,middlePoints)
-        print("Correct: " + str(correct))
-        print("Wrong: "+ str(wrong))
-        print("Missed: "+ str(missed))
-
-        while(True):
-            if cv2.waitKey(1) & 0xFF == ord('q'): break
-
+        # print("Correct: " + str(correct))
+        # print("Wrong: "+ str(wrong))
+        # print("Missed: "+ str(missed))
+        krotka = [correct,wrong,missed]
+        coverageMatrix.append(krotka)
+        allCorrect += correct
+        allWrong += wrong
+        allMissed += missed
+        # while(True):
+        #     if cv2.waitKey(1) & 0xFF == ord('q'): break
+    # allCorrect = np.sum(coverageMatrix[:,0])
+    # allWrong = np.sum(coverageMatrix[:,1])
+    # allMissed = np.sum(coverageMatrix[:,2])
+    print("All correct: " + str(allCorrect) + " ALL WRONG: " + str(allWrong) + " ALL MISSED: " + str(allMissed))
+    result = (allCorrect-allWrong)/(allCorrect+allMissed)
+    print(result)
     cv2.destroyAllWindows()
 
 def checkRectangle(image,points):
