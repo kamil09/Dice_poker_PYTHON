@@ -1,3 +1,6 @@
+import datetime
+from multiprocessing.pool import Pool
+
 import cv2
 import numpy as np
 from skimage.exposure import exposure
@@ -98,19 +101,19 @@ def findAndDraw(image):
     img = image.copy()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    per1, per2 = np.percentile(img[:,:,0], (cst.rescaleH_per_min, cst.rescaleH_per_max))
+    per1, per2 = np.percentile(img[:,:,0], (cst.rescaleH_per_min[0], cst.rescaleH_per_max[0]))
     img[:,:,0] = exposure.rescale_intensity(img[:, :, 0], in_range=(per1, per2), out_range=(0, 180))
-    per1, per2 = np.percentile(img[:, :, 1], (cst.rescaleS_per_min, cst.rescaleS_per_max))
+    per1, per2 = np.percentile(img[:, :, 1], (cst.rescaleS_per_min[0], cst.rescaleS_per_max[0]))
     img[:, :, 1] = exposure.rescale_intensity(img[:, :, 1], in_range=(per1, per2), out_range=(0, 255))
-    per1, per2 = np.percentile(img[:, :, 2], (cst.rescaleV_per_min, cst.rescaleV_per_max))
+    per1, per2 = np.percentile(img[:, :, 2], (cst.rescaleV_per_min[0], cst.rescaleV_per_max[0]))
     img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per1, per2), out_range=(0, 255))
 
     img = cv2.medianBlur(img, cst.median_blur)
-    perS = np.percentile(img[:,:,1], cst.progS_min)
-    perV = np.percentile(img[:,:,2], cst.progV_min)
+    perS = np.percentile(img[:,:,1], cst.progS_min[0])
+    perV = np.percentile(img[:,:,2], cst.progV_min[0])
     innerRange = cv2.inRange(img,
-                             np.array([cst.progH_min, perS, perV], dtype="uint8"),
-                             np.array([cst.progH_max, cst.progS_max, cst.progV_max], dtype="uint8"))
+                             np.array([cst.progH_min[0], perS, perV], dtype="uint8"),
+                             np.array([cst.progH_max[0], cst.progS_max[0], cst.progV_max[0]], dtype="uint8"))
 
     kernel = np.ones((6, 6), np.uint8)
     innerRange = cv2.morphologyEx(innerRange, cv2.MORPH_CLOSE, kernel, iterations=2)
@@ -165,7 +168,7 @@ def findAndDraw(image):
                 cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
 
     image = cv2.resize(image, None, fx=800/image.shape[1], fy=600/image.shape[0], interpolation=cv2.INTER_CUBIC)
-    cv2.imshow("Kostki", image)
+    #cv2.imshow("Kostki", image)
     return kostki,middlePoints
 
 
@@ -182,7 +185,7 @@ def playCamera(camera):
     while (check):
         check, klatka = cap.read()
         kostki,_ = findAndDraw(klatka)
-        print(kostki)
+        #print(kostki)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
     cap.release()
     cv2.destroyAllWindows()
@@ -192,31 +195,28 @@ def checkImages():
     allCorrect = 0
     allWrong = 0
     allMissed = 0
+
     for i in range(65):
         fileName = "images/"+str(i+1)
         image = cv2.imread(fileName+".jpg")
         if (image is None): continue
-        #print(fileName)
+
         kostki,middlePoints = findAndDraw(image)
-        print(kostki)
+        #print(kostki)
         test = cv2.imread(fileName+"test.png")
         correct,wrong,missed = checkRectangle(test,middlePoints)
-        # print("Correct: " + str(correct))
-        # print("Wrong: "+ str(wrong))
-        # print("Missed: "+ str(missed))
+
         krotka = [correct,wrong,missed]
+
         coverageMatrix.append(krotka)
         allCorrect += correct
         allWrong += wrong
         allMissed += missed
-        # while(True):
-        #     if cv2.waitKey(1) & 0xFF == ord('q'): break
-    # allCorrect = np.sum(coverageMatrix[:,0])
-    # allWrong = np.sum(coverageMatrix[:,1])
-    # allMissed = np.sum(coverageMatrix[:,2])
-    print("All correct: " + str(allCorrect) + " ALL WRONG: " + str(allWrong) + " ALL MISSED: " + str(allMissed))
+
+    #print("All correct: " + str(allCorrect) + " ALL WRONG: " + str(allWrong) + " ALL MISSED: " + str(allMissed))
     result = (allCorrect-allWrong)/(allCorrect+allMissed)
     print(result)
+
     cv2.destroyAllWindows()
 
 def checkRectangle(image,points):
@@ -251,9 +251,18 @@ def checkRectangle(image,points):
     missed = len(middleDices)
 
     image = cv2.resize(image, None, fx=800 / image.shape[1], fy=600 / image.shape[0], interpolation=cv2.INTER_CUBIC)
-    cv2.imshow("TEST",image)
+    #cv2.imshow("TEST",image)
     return correct,wrong,missed
 
 if __name__ == '__main__':
     # playCamera(0)
-    checkImages()
+
+    cst.rescaleH_per_min[0] = cst.rescaleH_per_min[1]
+    for i in range(100):
+        cst.rescaleH_per_min[0] += cst.rescaleH_per_min[3]
+        if(cst.rescaleH_per_min[0] > cst.rescaleH_per_min[2]): break
+        cst.rescaleH_per_max[0] = cst.rescaleH_per_max[1]
+        for k in range(100):
+            cst.rescaleH_per_max[0] += cst.rescaleH_per_max[3]
+            if (cst.rescaleH_per_max[0] > cst.rescaleH_per_max[2]): break
+            checkImages()
