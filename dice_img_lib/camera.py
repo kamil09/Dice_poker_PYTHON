@@ -193,8 +193,10 @@ def checkImages():
     allWrong = 0
     allMissed = 0
     for i in range(65):
-        fileName = "../images/"+str(i+1)
+        fileName = "images/"+str(i+1)
         image = cv2.imread(fileName+".jpg")
+        if (image is None): continue
+        #print(fileName)
         kostki,middlePoints = findAndDraw(image)
         print(kostki)
         test = cv2.imread(fileName+"test.png")
