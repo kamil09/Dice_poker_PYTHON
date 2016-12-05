@@ -23,14 +23,47 @@ def getRect(contour):
     pts = contour.reshape(len(contour), 2)
     rect = np.zeros((4, 2), dtype="float32")
 
-    suma = pts.sum(axis=1)
-    rect[0] = pts[np.argmin(suma)]
-    rect[2] = pts[np.argmax(suma)]
-
-    diff = np.diff(pts, axis=1)
-    rect[1] = pts[np.argmin(diff)]
-    rect[3] = pts[np.argmax(diff)]
+    pts = sorted(pts,key=lambda x: x[0])
+    print(pts)
+    if pts[-1][1] > pts[-2][1]:
+        rect[1] = pts[-1]
+        rect[2] = pts[-2]
+    else:
+        rect[1] = pts[-2]
+        rect[2] = pts[-1]
+    if pts[0][1] > pts[1][1]:
+        rect[0] = pts[0]
+        rect[3] = pts[1]
+    else:
+        rect[0] = pts[1]
+        rect[3] = pts[0]
     return rect
+
+def getLine(point1,point2):
+    a = 0
+    deltaX = point1[0] - point2[0]
+    deltaY = point1[1] - point2[1]
+    if deltaX == 0:
+        # deltaX = 1
+        a = deltaY
+    elif deltaY == 0:
+        a = deltaX
+    else:
+        a = deltaY/deltaX
+    b = point2[1]
+    c = point2[0]
+    return a,b,c
+
+
+def getMiddlePoint(rect):
+    a1,b1,c1 = getLine(rect[2],rect[0])
+    a2,b2,c2 = getLine(rect[3],rect[1])
+    x = (c1*a1 - c2*a2 + b2 - b1)/(a1 - a2)
+    y = a1*(x-c1) + b1
+    point = []
+    point.append(x)
+    point.append(y)
+    return point
 
 def perspectiveView(image,rect):
 
@@ -95,6 +128,7 @@ def findAndDraw(image):
 
     dices = findSquares(imgR)
 
+    middlePoints = []
     kostki = []
     if (dices is not None):
         for d in dices:
@@ -106,9 +140,12 @@ def findAndDraw(image):
             maxY = max(Y)
             size = max(maxY-minY, maxX-minX)
             if not (maxX - minX < minSquare or maxY - minY < minSquare):
-
-                dice = perspectiveView(image.copy(),getRect(d))
-
+                rect = getRect(d)
+                print(rect)
+                dice = perspectiveView(image.copy(),rect)
+                middle = getMiddlePoint(rect)
+                cv2.circle(image, (middle[0], middle[1]), 2, (255, 0, 0), 3)  # Center of a circle
+                middlePoints.append(middle)
 
                 dice = cv2.resize(dice, None, fx=400/size, fy=400/size, interpolation=cv2.INTER_CUBIC)
 
@@ -129,7 +166,7 @@ def findAndDraw(image):
 
     image = cv2.resize(image, None, fx=800/image.shape[1], fy=600/image.shape[0], interpolation=cv2.INTER_CUBIC)
     cv2.imshow("Kostki", image)
-    return kostki
+    return kostki,middlePoints
 
 
 def probkowanie(tablicaKostek,kostki):
@@ -144,7 +181,7 @@ def playCamera(camera):
     cap.set(4,480)
     while (check):
         check, klatka = cap.read()
-        kostki = findAndDraw(klatka)
+        kostki,_ = findAndDraw(klatka)
         print(kostki)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
     cap.release()
@@ -152,14 +189,55 @@ def playCamera(camera):
 
 def checkImages():
     for i in range(65):
-        image = cv2.imread("images/"+str(i+1)+".jpg")
-        kostki = findAndDraw(image)
+        fileName = "../images/"+str(i+1)
+        image = cv2.imread(fileName+".jpg")
+        kostki,middlePoints = findAndDraw(image)
         print(kostki)
+        test = cv2.imread(fileName+"test.png")
+        correct,wrong,missed = checkRectangle(test,middlePoints)
+        print("Correct: " + str(correct))
+        print("Wrong: "+ str(wrong))
+        print("Missed: "+ str(missed))
 
         while(True):
             if cv2.waitKey(1) & 0xFF == ord('q'): break
 
     cv2.destroyAllWindows()
+
+def checkRectangle(image,points):
+    middlePoints = points
+    dices = findSquares(cv2.cvtColor(image,cv2.COLOR_BGR2GRAY))
+    correct = 0
+    wrong = 0
+    middleDices = []
+    for d in dices:
+        rect = getRect(d)
+        middle = getMiddlePoint(rect)
+        cv2.circle(image, (middle[0], middle[1]), 2, (255, 0, 0), 3)  # Center of a circle
+        middleDices.append(middle)
+        distance = np.sqrt(((rect[0][0] - middle[0])**2)+((rect[0][1] - middle[1])**2))
+        distance = distance*0.8
+        middleDices[-1].append(distance)
+    for point in middlePoints:
+        found = None
+        for d in middleDices:
+            distance = np.sqrt(((point[0] - d[0])**2)+((point[1]-d[1])**2))
+            if distance < d[2]:
+                cv2.circle(image, (d[0], d[1]), 2, (0, 255, 255), 3)  # Center of a circle
+                found = d
+                break
+        if found is not None:
+            correct = correct + 1
+            middleDices.remove(found)
+            cv2.circle(image, (point[0], point[1]), 2, (0, 255, 0), 3)  # Center of a circle
+        else:
+            wrong = wrong +1
+            cv2.circle(image, (point[0], point[1]), 2, (0, 0, 255), 3)  # Center of a circle
+    missed = len(middleDices)
+
+    image = cv2.resize(image, None, fx=800 / image.shape[1], fy=600 / image.shape[0], interpolation=cv2.INTER_CUBIC)
+    cv2.imshow("TEST",image)
+    return correct,wrong,missed
 
 if __name__ == '__main__':
     # playCamera(0)
