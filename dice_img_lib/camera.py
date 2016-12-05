@@ -215,9 +215,8 @@ def checkImages():
 
     #print("All correct: " + str(allCorrect) + " ALL WRONG: " + str(allWrong) + " ALL MISSED: " + str(allMissed))
     result = (allCorrect-allWrong)/(allCorrect+allMissed)
-    print(result)
-
     cv2.destroyAllWindows()
+    return result
 
 def checkRectangle(image,points):
     middlePoints = points
@@ -257,12 +256,70 @@ def checkRectangle(image,points):
 if __name__ == '__main__':
     # playCamera(0)
 
-    cst.rescaleH_per_min[0] = cst.rescaleH_per_min[1]
-    for i in range(100):
-        cst.rescaleH_per_min[0] += cst.rescaleH_per_min[3]
-        if(cst.rescaleH_per_min[0] > cst.rescaleH_per_min[2]): break
-        cst.rescaleH_per_max[0] = cst.rescaleH_per_max[1]
-        for k in range(100):
-            cst.rescaleH_per_max[0] += cst.rescaleH_per_max[3]
-            if (cst.rescaleH_per_max[0] > cst.rescaleH_per_max[2]): break
-            checkImages()
+    best = [0,0,0]
+    licznik = 0
+    for i in np.arange(cst.rescaleH_per_min[1], cst.rescaleH_per_min[2], step=cst.rescaleH_per_min[3]):
+        for k in np.arange(cst.rescaleH_per_max[1], cst.rescaleH_per_max[2], step=cst.rescaleH_per_max[3]):
+            cst.rescaleH_per_min[0]=i
+            cst.rescaleH_per_max[0]=k
+            res = checkImages()
+            licznik+=1
+            print("L:"+str(licznik))
+            if(res - best[0] > 0.00001):
+                best[0] = res
+                best[1] = i
+                best[2] = k
+                print(str(i)+"    "+str(k)+"    "+str(res))
+    cst.rescaleH_per_min[0] = best[1]
+    cst.rescaleH_per_max[0] = best[2]
+    best = [0,0,0]
+    licznik=0
+
+    for i in np.arange(cst.rescaleH_per_min[1], cst.rescaleH_per_min[2], step=cst.rescaleH_per_min[3]):
+        for k in np.arange(cst.rescaleH_per_max[1], cst.rescaleH_per_max[2], step=cst.rescaleH_per_max[3]):
+            cst.rescaleH_per_min[0]=i
+            cst.rescaleH_per_max[0]=k
+            res = checkImages()
+            licznik+=1
+            print("L:"+str(licznik))
+            if(res - best[0] > 0.00001):
+                best[0] = res
+                best[1] = i
+                best[2] = k
+                print("H: "+ str(i)+"    "+str(k)+"    "+str(res))
+    cst.rescaleH_per_min[0] = best[1]
+    cst.rescaleH_per_max[0] = best[2]
+    best = [0,0,0]
+    licznik=0
+
+    for i in np.arange(cst.rescaleS_per_min[1], cst.rescaleS_per_min[2], step=cst.rescaleS_per_min[3]):
+        for k in np.arange(cst.rescaleS_per_max[1], cst.rescaleS_per_max[2], step=cst.rescaleS_per_max[3]):
+            cst.rescaleS_per_min[0]=i
+            cst.rescaleS_per_max[0]=k
+            res = checkImages()
+            licznik+=1
+            print("L:"+str(licznik))
+            if(res - best[0] > 0.00001):
+                best[0] = res
+                best[1] = i
+                best[2] = k
+                print("S: "+str(i)+"    "+str(k)+"    "+str(res))
+    cst.rescaleS_per_min[0] = best[1]
+    cst.rescaleS_per_max[0] = best[2]
+    best = [0,0,0]
+    licznik=0
+
+    for i in np.arange(cst.rescaleV_per_min[1], cst.rescaleV_per_min[2], step=cst.rescaleV_per_min[3]):
+        for k in np.arange(cst.rescaleV_per_max[1], cst.rescaleV_per_max[2], step=cst.rescaleV_per_max[3]):
+            cst.rescaleV_per_min[0]=i
+            cst.rescaleV_per_max[0]=k
+            res = checkImages()
+            licznik+=1
+            print("L:"+str(licznik))
+            if(res - best[0] > 0.00001):
+                best[0] = res
+                best[1] = i
+                best[2] = k
+                print("V: "+str(i)+"    "+str(k)+"    "+str(res))
+    cst.rescaleV_per_min[0] = best[1]
+    cst.rescaleV_per_max[0] = best[2]
