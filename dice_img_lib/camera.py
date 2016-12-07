@@ -1,6 +1,3 @@
-import datetime
-from multiprocessing.pool import Pool
-
 import cv2
 import numpy as np
 from skimage.exposure import exposure
@@ -8,17 +5,21 @@ from dice_img_lib import const as cst
 
 from dice_img_lib import blob
 
-minSquare = 40
+minSquare = 35
 
-def findSquares(image):
+def findSquares(image, aprox=0.1):
     image2, conturs, hierarchy = cv2.findContours(image.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
 
     diceContours = []
     for c in conturs:
         perimeter = cv2.arcLength(c, True)
-        approximation = cv2.approxPolyDP(c, 0.1 * perimeter, True)
+        approximation = cv2.approxPolyDP(c, aprox * perimeter, True)
         if len(approximation) >= 4:
             diceContours.append(approximation)
+        else:
+            approximation = cv2.approxPolyDP(c, (aprox-0.005) * perimeter, True)
+            if(len(approximation) >= 4):
+                diceContours.append(approximation)
     return diceContours
 
 
@@ -108,28 +109,30 @@ def findAndDraw(image):
     per1, per2 = np.percentile(img[:, :, 2], (cst.rescaleV_per_min[0], cst.rescaleV_per_max[0]))
     img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per1, per2), out_range=(0, 255))
 
+    #cv2.imshow("Dice",img)
+
+
     img = cv2.medianBlur(img, cst.median_blur)
-    perS = np.percentile(img[:,:,1], cst.progS_min[0])
-    perV = np.percentile(img[:,:,2], cst.progV_min[0])
+    #perS = np.percentile(img[:,:,1], cst.progS_min[0])
+    #perV = np.percentile(img[:,:,2], cst.progV_min[0])
     innerRange = cv2.inRange(img,
-                             np.array([cst.progH_min[0], perS, perV], dtype="uint8"),
+                             np.array([cst.progH_min[0], cst.progS_min[0], cst.progV_min[0]], dtype="uint8"),
                              np.array([cst.progH_max[0], cst.progS_max[0], cst.progV_max[0]], dtype="uint8"))
 
-    kernel = np.ones((6, 6), np.uint8)
-    innerRange = cv2.morphologyEx(innerRange, cv2.MORPH_CLOSE, kernel, iterations=2)
+    kernel = np.ones((cst.progMorSize[0], cst.progMorSize[0]), np.uint8)
+    innerRange = cv2.morphologyEx(innerRange, cv2.MORPH_CLOSE, kernel, iterations=cst.progMorRepe[0])
     img[:,:,2] = cv2.bitwise_and(img[:,:,2], img[:,:,2], mask=innerRange)
 
     img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
     imgR = img.copy()
     imgR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
 
-    imgR = cv2.bilateralFilter(imgR, 10, 150, 150)  # Blur image, remove noise but keep edges
-    imgR = exposure.rescale_intensity(imgR, in_range=(0, 100), out_range=(0, 255))
+    imgR = cv2.bilateralFilter(imgR, cst.bilaX[0], cst.bilaY[0], cst.bilaZ[0])  # Blur image, remove noise but keep edges
 
     kernel = np.ones((3, 3), np.uint8)
     imgR = cv2.morphologyEx(imgR, cv2.MORPH_OPEN, kernel, iterations=6)
-
-    dices = findSquares(imgR)
+    #cv2.imshow("XXXXXXXXXXX",imgR)
+    dices = findSquares(imgR, 0.1)
 
     middlePoints = []
     kostki = []
@@ -144,7 +147,7 @@ def findAndDraw(image):
             size = max(maxY-minY, maxX-minX)
             if not (maxX - minX < minSquare or maxY - minY < minSquare):
                 rect = getRect(d)
-                # print(rect)
+                #print(rect)
                 dice = perspectiveView(image.copy(),rect)
                 middle = getMiddlePoint(rect)
                 cv2.circle(image, (middle[0], middle[1]), 2, (255, 0, 0), 3)  # Center of a circle
@@ -192,10 +195,11 @@ def playCamera(camera):
 
 def checkImages():
     coverageMatrix = []
-    allCorrect = 0
-    allWrong = 0
-    allMissed = 0
-
+    allCorrect = 0.0
+    allWrong = 0.0
+    allMissed = 0.0
+    srednia = 0.0
+    b = 0
     for i in range(65):
         fileName = "images/"+str(i+1)
         image = cv2.imread(fileName+".jpg")
@@ -207,14 +211,21 @@ def checkImages():
         correct,wrong,missed = checkRectangle(test,middlePoints)
 
         krotka = [correct,wrong,missed]
-
+        b += 1
         coverageMatrix.append(krotka)
+        #print(correct)
         allCorrect += correct
         allWrong += wrong
         allMissed += missed
+        srednia += (correct-wrong)/(correct+missed)
+        #print(str(b)+". &"+str(correct)+"&"+str(wrong)+"&"+str(missed)+"\\\\")
+        #while True:
+        #    if cv2.waitKey(1) & 0xFF == ord('q'): break
 
     #print("All correct: " + str(allCorrect) + " ALL WRONG: " + str(allWrong) + " ALL MISSED: " + str(allMissed))
-    result = (allCorrect-allWrong)/(allCorrect+allMissed)
+    #print(str(b) + ". &" + str(allCorrect) + "&" + str(allWrong) + "&" + str(allMissed) + "\\\\")
+    result = srednia/len(coverageMatrix)
+    #print(result)
     cv2.destroyAllWindows()
     return result
 
@@ -255,71 +266,4 @@ def checkRectangle(image,points):
 
 if __name__ == '__main__':
     # playCamera(0)
-
-    best = [0,0,0]
-    licznik = 0
-    for i in np.arange(cst.rescaleH_per_min[1], cst.rescaleH_per_min[2], step=cst.rescaleH_per_min[3]):
-        for k in np.arange(cst.rescaleH_per_max[1], cst.rescaleH_per_max[2], step=cst.rescaleH_per_max[3]):
-            cst.rescaleH_per_min[0]=i
-            cst.rescaleH_per_max[0]=k
-            res = checkImages()
-            licznik+=1
-            print("L:"+str(licznik))
-            if(res - best[0] > 0.00001):
-                best[0] = res
-                best[1] = i
-                best[2] = k
-                print(str(i)+"    "+str(k)+"    "+str(res))
-    cst.rescaleH_per_min[0] = best[1]
-    cst.rescaleH_per_max[0] = best[2]
-    best = [0,0,0]
-    licznik=0
-
-    for i in np.arange(cst.rescaleH_per_min[1], cst.rescaleH_per_min[2], step=cst.rescaleH_per_min[3]):
-        for k in np.arange(cst.rescaleH_per_max[1], cst.rescaleH_per_max[2], step=cst.rescaleH_per_max[3]):
-            cst.rescaleH_per_min[0]=i
-            cst.rescaleH_per_max[0]=k
-            res = checkImages()
-            licznik+=1
-            print("L:"+str(licznik))
-            if(res - best[0] > 0.00001):
-                best[0] = res
-                best[1] = i
-                best[2] = k
-                print("H: "+ str(i)+"    "+str(k)+"    "+str(res))
-    cst.rescaleH_per_min[0] = best[1]
-    cst.rescaleH_per_max[0] = best[2]
-    best = [0,0,0]
-    licznik=0
-
-    for i in np.arange(cst.rescaleS_per_min[1], cst.rescaleS_per_min[2], step=cst.rescaleS_per_min[3]):
-        for k in np.arange(cst.rescaleS_per_max[1], cst.rescaleS_per_max[2], step=cst.rescaleS_per_max[3]):
-            cst.rescaleS_per_min[0]=i
-            cst.rescaleS_per_max[0]=k
-            res = checkImages()
-            licznik+=1
-            print("L:"+str(licznik))
-            if(res - best[0] > 0.00001):
-                best[0] = res
-                best[1] = i
-                best[2] = k
-                print("S: "+str(i)+"    "+str(k)+"    "+str(res))
-    cst.rescaleS_per_min[0] = best[1]
-    cst.rescaleS_per_max[0] = best[2]
-    best = [0,0,0]
-    licznik=0
-
-    for i in np.arange(cst.rescaleV_per_min[1], cst.rescaleV_per_min[2], step=cst.rescaleV_per_min[3]):
-        for k in np.arange(cst.rescaleV_per_max[1], cst.rescaleV_per_max[2], step=cst.rescaleV_per_max[3]):
-            cst.rescaleV_per_min[0]=i
-            cst.rescaleV_per_max[0]=k
-            res = checkImages()
-            licznik+=1
-            print("L:"+str(licznik))
-            if(res - best[0] > 0.00001):
-                best[0] = res
-                best[1] = i
-                best[2] = k
-                print("V: "+str(i)+"    "+str(k)+"    "+str(res))
-    cst.rescaleV_per_min[0] = best[1]
-    cst.rescaleV_per_max[0] = best[2]
+    checkImages()
