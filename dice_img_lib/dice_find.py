@@ -14,7 +14,7 @@ def listToString(diceList):
     return newString
 
 def stringToList(string):
-    stringList = string.split("_", 1)
+    stringList = string.split("_")
     diceList = []
     stringList.remove("")
     print(stringList)
