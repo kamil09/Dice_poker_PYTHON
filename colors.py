@@ -10,3 +10,4 @@ class bcolors:
     UNDERLINE = '\033[4m'
     BLUE_BAC = '\033[44m'
     YELL_BAC = '\033[43m'
+    PLAYER = '\033[104m'

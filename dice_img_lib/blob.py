@@ -8,7 +8,7 @@ __blobSettings__.minThreshold = 0;
 __blobSettings__.maxThreshold = 255;
 
 __blobSettings__.filterByArea = True
-__blobSettings__.minArea = 20*20*3.14
+__blobSettings__.minArea = 15*15*3.14
 
 __blobSettings__.filterByCircularity = True
 __blobSettings__.minCircularity = 0.5

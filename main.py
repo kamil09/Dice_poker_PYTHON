@@ -58,7 +58,7 @@ def playOneRound(pl1, pl2):
         print("found "+str(num)+" dices instead of 5, try again")
 
     print("YOUR DICES:")
-    dice.printDicesInLine(yourDices, bcolors.BLUE_BAC)
+    dice.printDicesInLine(yourDices, bcolors.PLAYER)
 
     computerDices, retC = ai.simpleRethrow(computerDices)
     print("Computer Rethrow values: ", end="")
@@ -91,7 +91,7 @@ def playOneRound(pl1, pl2):
     print("COMPUTER DICES:")
     dice.printDicesInLine(computerDices, bcolors.YELL_BAC)
     print("YOUR DICES:")
-    dice.printDicesInLine(yourDices, bcolors.BLUE_BAC)
+    dice.printDicesInLine(yourDices, bcolors.PLAYER)
     winner = dice.checkWinner(yourDices, computerDices)
     if(winner == 1):
         print("You won this round")

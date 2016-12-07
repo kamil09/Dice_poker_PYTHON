@@ -173,11 +173,11 @@ def playCamera(camera):
     while (check):
         check, klatka = cap.read()
         kostki,_ = findAndDraw(klatka)
-        #print(kostki)
+        print(kostki)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
     cap.release()
     #cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    #playCamera(0)
-    test.checkImages()
+    playCamera(0)
+    #test.checkImages()

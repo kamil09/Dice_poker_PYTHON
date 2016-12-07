@@ -1,7 +1,8 @@
 #Return number of dices and list of it's values
 #How many dices we must find, if 0 - any number
-
+import time
 camera = 0
+
 
 import cv2
 from dice_img_lib import camera as cam
@@ -17,7 +18,7 @@ def stringToList(string):
     stringList = string.split("_")
     diceList = []
     stringList.remove("")
-    print(stringList)
+    #print(stringList)
     for s in stringList:
         diceList.append(int(s))
     return diceList
@@ -40,6 +41,6 @@ def find_dices():
     v = list(map.values())
     k = list(map.keys())
     string =  k[v.index(max(v))]
-    print(string)
+    #print(string)
     dices = stringToList(string)
     return len(dices), dices
