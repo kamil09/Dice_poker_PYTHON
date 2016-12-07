@@ -10,15 +10,17 @@ from collections import defaultdict
 def listToString(diceList):
     newString = ""
     for d in diceList:
-        newString += "_" + str(d)
+        newString += str(d) + "_"
     return newString
 
 def stringToList(string):
-   stringList = string.split("_",1)
-   diceList = []
-   for s in stringList:
-       diceList.append(int(s))
-   return diceList
+    stringList = string.split("_", 1)
+    diceList = []
+    stringList.remove("")
+    print(stringList)
+    for s in stringList:
+        diceList.append(int(s))
+    return diceList
 
 
 def find_dices():
@@ -35,7 +37,9 @@ def find_dices():
         map[newHash] += 1
     cap.release()
     if(len(map) == 0 ): return 0,[]
-    string = max(map.iterkeys(), key=(lambda key: map[key]))
+    v = list(map.values())
+    k = list(map.keys())
+    string =  k[v.index(max(v))]
     print(string)
     dices = stringToList(string)
     return len(dices), dices
