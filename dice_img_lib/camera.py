@@ -2,14 +2,13 @@ import cv2
 import numpy as np
 from skimage.exposure import exposure
 from dice_img_lib import const as cst
-
 from dice_img_lib import blob
+from dice_img_lib import test
 
 minSquare = 35
 
 def findSquares(image, aprox=0.1):
     image2, conturs, hierarchy = cv2.findContours(image.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
-
     diceContours = []
     for c in conturs:
         perimeter = cv2.arcLength(c, True)
@@ -22,13 +21,11 @@ def findSquares(image, aprox=0.1):
                 diceContours.append(approximation)
     return diceContours
 
-
 def getRect(contour):
     pts = contour.reshape(len(contour), 2)
     rect = np.zeros((4, 2), dtype="float32")
 
     pts = sorted(pts,key=lambda x: x[0])
-    # print(pts)
     if pts[-1][1] > pts[-2][1]:
         rect[1] = pts[-1]
         rect[2] = pts[-2]
@@ -44,11 +41,9 @@ def getRect(contour):
     return rect
 
 def getLine(point1,point2):
-    a = 0
     deltaX = point1[0] - point2[0]
     deltaY = point1[1] - point2[1]
     if deltaX == 0:
-        # deltaX = 1
         a = deltaY
     elif deltaY == 0:
         a = deltaX
@@ -57,7 +52,6 @@ def getLine(point1,point2):
     b = point2[1]
     c = point2[0]
     return a,b,c
-
 
 def getMiddlePoint(rect):
     a1,b1,c1 = getLine(rect[2],rect[0])
@@ -70,7 +64,6 @@ def getMiddlePoint(rect):
     return point
 
 def perspectiveView(image,rect):
-
     (topLeft,topRight,bottomRight,bottomLeft) = rect
     widthBottom = np.sqrt(((bottomRight[0] - bottomLeft[0]) ** 2) + ((bottomRight[1] - bottomLeft[1]) ** 2))
     widthTop = np.sqrt(((topRight[0] - topLeft[0]) ** 2) + ((topRight[1] - topLeft[1]) ** 2))
@@ -98,7 +91,6 @@ def findBlobs(image):
 
 def findAndDraw(image):
     if image is None: return
-
     img = image.copy()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -109,12 +101,7 @@ def findAndDraw(image):
     per1, per2 = np.percentile(img[:, :, 2], (cst.rescaleV_per_min[0], cst.rescaleV_per_max[0]))
     img[:, :, 2] = exposure.rescale_intensity(img[:, :, 2], in_range=(per1, per2), out_range=(0, 255))
 
-    #cv2.imshow("Dice",img)
-
-
     img = cv2.medianBlur(img, cst.median_blur)
-    #perS = np.percentile(img[:,:,1], cst.progS_min[0])
-    #perV = np.percentile(img[:,:,2], cst.progV_min[0])
     innerRange = cv2.inRange(img,
                              np.array([cst.progH_min[0], cst.progS_min[0], cst.progV_min[0]], dtype="uint8"),
                              np.array([cst.progH_max[0], cst.progS_max[0], cst.progV_max[0]], dtype="uint8"))
@@ -131,7 +118,7 @@ def findAndDraw(image):
 
     kernel = np.ones((3, 3), np.uint8)
     imgR = cv2.morphologyEx(imgR, cv2.MORPH_OPEN, kernel, iterations=6)
-    #cv2.imshow("XXXXXXXXXXX",imgR)
+
     dices = findSquares(imgR, 0.1)
 
     middlePoints = []
@@ -147,7 +134,6 @@ def findAndDraw(image):
             size = max(maxY-minY, maxX-minX)
             if not (maxX - minX < minSquare or maxY - minY < minSquare):
                 rect = getRect(d)
-                #print(rect)
                 dice = perspectiveView(image.copy(),rect)
                 middle = getMiddlePoint(rect)
                 cv2.circle(image, (middle[0], middle[1]), 2, (255, 0, 0), 3)  # Center of a circle
@@ -162,15 +148,14 @@ def findAndDraw(image):
                 dice = exposure.rescale_intensity(dice, in_range=(p, 255), out_range=(0, 255))
 
                 keyPoints = findBlobs(dice)
-                dice = cv2.cvtColor(dice,cv2.COLOR_GRAY2BGR)
-                dice = cv2.drawKeypoints(dice,keyPoints,np.array([]),(0,255,0))
-                if ( 0 < len(keyPoints) < 7):
+                #dice = cv2.cvtColor(dice,cv2.COLOR_GRAY2BGR)
+                #dice = cv2.drawKeypoints(dice,keyPoints,np.array([]),(0,255,0))
+
+                if (0 < len(keyPoints) < 7):
                     kostki.append(len(keyPoints))
                 #cv2.imshow("Dice",dice)
-
-                cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
-
-    image = cv2.resize(image, None, fx=800/image.shape[1], fy=600/image.shape[0], interpolation=cv2.INTER_CUBIC)
+                #cv2.drawContours(image, [d], -1, (0, 0, 255), 3)
+    #image = cv2.resize(image, None, fx=800/image.shape[1], fy=600/image.shape[0], interpolation=cv2.INTER_CUBIC)
     #cv2.imshow("Kostki", image)
     return kostki,middlePoints
 
@@ -191,79 +176,8 @@ def playCamera(camera):
         #print(kostki)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
     cap.release()
-    cv2.destroyAllWindows()
-
-def checkImages():
-    coverageMatrix = []
-    allCorrect = 0.0
-    allWrong = 0.0
-    allMissed = 0.0
-    srednia = 0.0
-    b = 0
-    for i in range(65):
-        fileName = "images/"+str(i+1)
-        image = cv2.imread(fileName+".jpg")
-        if (image is None): continue
-
-        kostki,middlePoints = findAndDraw(image)
-        #print(kostki)
-        test = cv2.imread(fileName+"test.png")
-        correct,wrong,missed = checkRectangle(test,middlePoints)
-
-        krotka = [correct,wrong,missed]
-        b += 1
-        coverageMatrix.append(krotka)
-        #print(correct)
-        allCorrect += correct
-        allWrong += wrong
-        allMissed += missed
-        srednia += (correct-wrong)/(correct+missed)
-        #print(str(b)+". &"+str(correct)+"&"+str(wrong)+"&"+str(missed)+"\\\\")
-        #while True:
-        #    if cv2.waitKey(1) & 0xFF == ord('q'): break
-
-    #print("All correct: " + str(allCorrect) + " ALL WRONG: " + str(allWrong) + " ALL MISSED: " + str(allMissed))
-    #print(str(b) + ". &" + str(allCorrect) + "&" + str(allWrong) + "&" + str(allMissed) + "\\\\")
-    result = srednia/len(coverageMatrix)
-    #print(result)
-    cv2.destroyAllWindows()
-    return result
-
-def checkRectangle(image,points):
-    middlePoints = points
-    dices = findSquares(cv2.cvtColor(image,cv2.COLOR_BGR2GRAY))
-    correct = 0
-    wrong = 0
-    middleDices = []
-    for d in dices:
-        rect = getRect(d)
-        middle = getMiddlePoint(rect)
-        cv2.circle(image, (middle[0], middle[1]), 2, (255, 0, 0), 3)  # Center of a circle
-        middleDices.append(middle)
-        distance = np.sqrt(((rect[0][0] - middle[0])**2)+((rect[0][1] - middle[1])**2))
-        distance = distance*0.8
-        middleDices[-1].append(distance)
-    for point in middlePoints:
-        found = None
-        for d in middleDices:
-            distance = np.sqrt(((point[0] - d[0])**2)+((point[1]-d[1])**2))
-            if distance < d[2]:
-                cv2.circle(image, (d[0], d[1]), 2, (0, 255, 255), 3)  # Center of a circle
-                found = d
-                break
-        if found is not None:
-            correct = correct + 1
-            middleDices.remove(found)
-            cv2.circle(image, (point[0], point[1]), 2, (0, 255, 0), 3)  # Center of a circle
-        else:
-            wrong = wrong +1
-            cv2.circle(image, (point[0], point[1]), 2, (0, 0, 255), 3)  # Center of a circle
-    missed = len(middleDices)
-
-    image = cv2.resize(image, None, fx=800 / image.shape[1], fy=600 / image.shape[0], interpolation=cv2.INTER_CUBIC)
-    #cv2.imshow("TEST",image)
-    return correct,wrong,missed
+    #cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    # playCamera(0)
-    checkImages()
+    #playCamera(0)
+    test.checkImages()
