@@ -28,7 +28,7 @@ def find_dices():
     cap.set(3, 640)
     cap.set(4, 480)
     map = defaultdict(lambda : 0)
-    for i in range(10):
+    for i in range(20):
         check, klatka = cap.read()
         kostki, _ = cam.findAndDraw(klatka)
         if(len(kostki) == 0): continue
